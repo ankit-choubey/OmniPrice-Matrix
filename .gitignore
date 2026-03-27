@@ -1,6 +1,42 @@
-node_modules/
-.env
-.env.local
-venv/
-__pycache__/
+# macOS
 .DS_Store
+
+# environment files
+.env
+.env.*
+!.env.example
+
+# Firebase service accounts and sensitive key material
+*firebase-adminsdk*.json
+*.pem
+*.key
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.db
+*.sqlite
+*.sqlite3
+
+# Playwright browser cache
+ms-playwright/
+
+# Editor / IDE
+.idea/
+.vscode/
