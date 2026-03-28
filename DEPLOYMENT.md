@@ -187,6 +187,31 @@ docker build -t buylo-backend .
    - Add environment variables
    - Deploy
 
+### Option C: Deploy Backend to Render
+
+This repo now includes [render.yaml](render.yaml) for one-click Render setup.
+
+1. Go to https://dashboard.render.com
+2. Click New + -> Blueprint
+3. Connect your GitHub repository
+4. Render will detect `render.yaml` and create `buylo-backend`
+5. Add required secret env vars when prompted:
+   - `FIRECRAWL_API_KEY`
+   - `GROQ_API_KEY`
+   - `FIREBASE_PROJECT_ID`
+   - `FIREBASE_PRIVATE_KEY_ID`
+   - `FIREBASE_PRIVATE_KEY`
+   - `FIREBASE_CLIENT_EMAIL`
+   - `FIREBASE_CLIENT_ID`
+   - `FIREBASE_CLIENT_X509_CERT_URL`
+6. Deploy and wait for health check: `/health`
+
+Expected backend URL format after deploy:
+- `https://buylo-backend.onrender.com`
+
+Then set frontend environment variable on Vercel:
+- `NEXT_PUBLIC_API_BASE_URL=https://buylo-backend.onrender.com`
+
 ---
 
 ## 🔄 Implementation Checklist
