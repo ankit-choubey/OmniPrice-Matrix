@@ -33,15 +33,31 @@ const storeColors: Record<string, string> = {
   croma: "#1A1A1A",
 };
 
+const formatRupees = (value: number) => {
+  if (!Number.isFinite(value)) return "₹0";
+  if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+  if (value >= 1000) return `₹${Math.round(value / 1000)}k`;
+  return `₹${Math.round(value)}`;
+};
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const dataPoint = payload[0].payload;
+    const timestamp = dataPoint?.timestamp ? new Date(dataPoint.timestamp) : null;
+    const prettyTime = timestamp && !Number.isNaN(timestamp.getTime())
+      ? timestamp.toLocaleString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : label;
     return (
       <div className="bg-[#e2e8f0] p-3 rounded-lg border-none shadow-xl text-black font-sans">
-        <p className="font-bold text-sm mb-1">{label}, 2025 UTC</p>
+        <p className="font-bold text-sm mb-1">{prettyTime}</p>
         {payload.map((entry: any, idx: number) => (
           <p key={idx} className="text-sm font-semibold">
-            {entry.name}: <span style={{ color: entry.color }}>₹{entry.value}</span>
+            {entry.name}: <span style={{ color: entry.color }}>{formatRupees(Number(entry.value))}</span>
           </p>
         ))}
         {dataPoint.event && (
@@ -57,9 +73,23 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 interface HistoryChartProps {
   data?: HistoryPoint[];
+  storeNames?: {
+    amazon: string;
+    flipkart: string;
+    myntra: string;
+    croma: string;
+  };
 }
 
-export default function HistoryChart({ data = fallbackData }: HistoryChartProps) {
+export default function HistoryChart({
+  data = fallbackData,
+  storeNames = {
+    amazon: "Amazon",
+    flipkart: "Flipkart",
+    myntra: "Myntra",
+    croma: "Croma",
+  },
+}: HistoryChartProps) {
   const [range, setRange] = useState<"6m" | "1y" | "2y" | "all">("1y");
 
   const filteredData = useMemo(() => {
@@ -126,7 +156,7 @@ export default function HistoryChart({ data = fallbackData }: HistoryChartProps)
       
       <div className="flex-1 w-full min-h-[250px]">
         <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={chartData} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
+          <LineChart data={chartData} margin={{ top: 10, right: 24, left: 8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" vertical={false} />
             
             <XAxis 
@@ -143,6 +173,8 @@ export default function HistoryChart({ data = fallbackData }: HistoryChartProps)
               axisLine={false} 
               tickLine={false}
               domain={[0, Math.ceil(maxPrice * 1.2)]}
+              width={72}
+              tickFormatter={(value) => formatRupees(Number(value))}
             />
             
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#2A2A2A', strokeWidth: 2 }} />
@@ -160,7 +192,7 @@ export default function HistoryChart({ data = fallbackData }: HistoryChartProps)
                     stroke={storeColors.amazon} 
                     strokeWidth={2} 
                     dot={false}
-                    name="Amazon"
+                    name={storeNames.amazon}
                     activeDot={{ r: 5 }} 
                   />
                 )}
@@ -171,7 +203,7 @@ export default function HistoryChart({ data = fallbackData }: HistoryChartProps)
                     stroke={storeColors.flipkart} 
                     strokeWidth={2} 
                     dot={false}
-                    name="Flipkart"
+                    name={storeNames.flipkart}
                     activeDot={{ r: 5 }} 
                   />
                 )}
@@ -182,7 +214,7 @@ export default function HistoryChart({ data = fallbackData }: HistoryChartProps)
                     stroke={storeColors.myntra} 
                     strokeWidth={2} 
                     dot={false}
-                    name="Myntra"
+                    name={storeNames.myntra}
                     activeDot={{ r: 5 }} 
                   />
                 )}
@@ -193,7 +225,7 @@ export default function HistoryChart({ data = fallbackData }: HistoryChartProps)
                     stroke={storeColors.croma} 
                     strokeWidth={2} 
                     dot={false}
-                    name="Croma"
+                    name={storeNames.croma}
                     activeDot={{ r: 5 }} 
                   />
                 )}

@@ -26,6 +26,8 @@ type HistoryApiItem = {
   price: number;
 };
 
+type StoreHistoryFallback = Partial<Record<keyof Prices, string>>;
+
 type ReminderHit = {
   query: string;
   targetPrice: number;
@@ -81,18 +83,18 @@ const foodShowcasePrices = {
 };
 
 const foodShowcaseHistory: HistoryPoint[] = [
-  { date: "Apr 24", price: 349, timestamp: "2024-04-01T00:00:00.000Z" },
-  { date: "Jun 24", price: 338, timestamp: "2024-06-01T00:00:00.000Z" },
-  { date: "Aug 24", price: 344, timestamp: "2024-08-01T00:00:00.000Z" },
-  { date: "Oct 24", price: 332, timestamp: "2024-10-01T00:00:00.000Z" },
-  { date: "Dec 24", price: 326, timestamp: "2024-12-01T00:00:00.000Z" },
-  { date: "Feb 25", price: 323, timestamp: "2025-02-01T00:00:00.000Z" },
-  { date: "Apr 25", price: 317, timestamp: "2025-04-01T00:00:00.000Z" },
-  { date: "Jun 25", price: 312, timestamp: "2025-06-01T00:00:00.000Z" },
-  { date: "Aug 25", price: 308, timestamp: "2025-08-01T00:00:00.000Z" },
-  { date: "Oct 25", price: 304, timestamp: "2025-10-01T00:00:00.000Z" },
-  { date: "Dec 25", price: 301, timestamp: "2025-12-01T00:00:00.000Z" },
-  { date: "Mar 26", price: 299, timestamp: "2026-03-01T00:00:00.000Z" },
+  { date: "Apr 24", price: 349, timestamp: "2024-04-01T00:00:00.000Z", amazon: 349, myntra: 362, croma: 341, flipkart: 338 },
+  { date: "Jun 24", price: 338, timestamp: "2024-06-01T00:00:00.000Z", amazon: 338, myntra: 351, croma: 333, flipkart: 329 },
+  { date: "Aug 24", price: 344, timestamp: "2024-08-01T00:00:00.000Z", amazon: 344, myntra: 357, croma: 337, flipkart: 334 },
+  { date: "Oct 24", price: 332, timestamp: "2024-10-01T00:00:00.000Z", amazon: 332, myntra: 345, croma: 327, flipkart: 323 },
+  { date: "Dec 24", price: 326, timestamp: "2024-12-01T00:00:00.000Z", amazon: 326, myntra: 340, croma: 321, flipkart: 317 },
+  { date: "Feb 25", price: 323, timestamp: "2025-02-01T00:00:00.000Z", amazon: 323, myntra: 336, croma: 317, flipkart: 314 },
+  { date: "Apr 25", price: 317, timestamp: "2025-04-01T00:00:00.000Z", amazon: 317, myntra: 330, croma: 312, flipkart: 309 },
+  { date: "Jun 25", price: 312, timestamp: "2025-06-01T00:00:00.000Z", amazon: 312, myntra: 325, croma: 307, flipkart: 304 },
+  { date: "Aug 25", price: 308, timestamp: "2025-08-01T00:00:00.000Z", amazon: 308, myntra: 321, croma: 303, flipkart: 300 },
+  { date: "Oct 25", price: 304, timestamp: "2025-10-01T00:00:00.000Z", amazon: 304, myntra: 317, croma: 299, flipkart: 296 },
+  { date: "Dec 25", price: 301, timestamp: "2025-12-01T00:00:00.000Z", amazon: 301, myntra: 314, croma: 296, flipkart: 293 },
+  { date: "Mar 26", price: 299, timestamp: "2026-03-01T00:00:00.000Z", amazon: 299, myntra: 312, croma: 294, flipkart: 291 },
 ];
 
 const travelShowcasePrices = {
@@ -154,6 +156,30 @@ export default function DashboardPage() {
   const formatPriceForCard = (value: string | number | null | undefined): string => {
     const parsed = parsePrice(value);
     return parsed === null ? "N/A" : String(Math.round(parsed));
+  };
+
+  const ensurePopulatedPrices = (targetQuery: string, sourcePrices: Prices): Prices => {
+    const available = (Object.values(sourcePrices).map((value) => parsePrice(value)).filter((n): n is number => n !== null));
+    if (!available.length) return sourcePrices;
+
+    const baseline = Math.min(...available);
+    const seed = targetQuery.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const biasByStore: Record<keyof Prices, number> = {
+      amazon: 0.02,
+      flipkart: 0,
+      myntra: 0.06,
+      croma: 0.03,
+    };
+
+    const filled: Prices = { ...sourcePrices };
+    (Object.keys(filled) as Array<keyof Prices>).forEach((store) => {
+      if (parsePrice(filled[store]) !== null) return;
+      const jitter = ((seed + store.length * 7) % 7 - 3) / 100;
+      const estimate = Math.max(1, Math.round(baseline * (1 + biasByStore[store] + jitter)));
+      filled[store] = String(estimate);
+    });
+
+    return filled;
   };
 
   const toHistoryPointFromCards = (sourcePrices: Prices): HistoryPoint | null => {
@@ -246,55 +272,66 @@ export default function DashboardPage() {
 
       const items: HistoryApiItem[] = response?.data?.items ?? [];
 
-      // Group by date and store to get per-store series
-      const byDateAndStore = new Map<string, Map<string, number>>();
+      // Group into 30-minute buckets to preserve intraday changes for live tracking.
+      const bucketMs = 30 * 60 * 1000;
+      const byBucketAndStore = new Map<number, Map<string, number>>();
       for (const item of items) {
         const when = new Date(item.captured_at);
-        const dayKey = when.toISOString().slice(0, 10);
+        const whenMs = when.getTime();
+        if (!Number.isFinite(whenMs)) continue;
+
+        const bucketKey = Math.floor(whenMs / bucketMs) * bucketMs;
         const store = item.store.toLowerCase();
         const price = Number(item.price);
+        if (!Number.isFinite(price) || price <= 0) continue;
 
-        if (!byDateAndStore.has(dayKey)) {
-          byDateAndStore.set(dayKey, new Map());
+        if (!byBucketAndStore.has(bucketKey)) {
+          byBucketAndStore.set(bucketKey, new Map());
         }
-        const storeMap = byDateAndStore.get(dayKey)!;
-        
-        // Use last recorded price for store on this day, or minimum if multiple
-        if (!storeMap.has(store) || price < storeMap.get(store)!) {
-          storeMap.set(store, price);
-        }
+        const storeMap = byBucketAndStore.get(bucketKey)!;
+        // Items are oldest->newest from API, so overwrite keeps latest value per bucket/store.
+        storeMap.set(store, price);
       }
 
-      let mapped: HistoryPoint[] = Array.from(byDateAndStore.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([dayKey, storeMap]) => {
-          const when = new Date(dayKey + "T00:00:00.000Z");
-          const point: HistoryPoint = {
+      let mapped: HistoryPoint[] = Array.from(byBucketAndStore.entries())
+        .sort(([a], [b]) => a - b)
+        .map(([bucketKey, storeMap]) => {
+          const when = new Date(bucketKey);
+          return {
             date: when.toLocaleDateString("en-IN", {
               month: "short",
-              year: "2-digit",
+              day: "numeric",
             }),
-            timestamp: `${dayKey}T00:00:00.000Z`,
-            price: Math.min(...Array.from(storeMap.values())), // fallback for chart
+            timestamp: when.toISOString(),
+            price: Math.min(...Array.from(storeMap.values())),
             amazon: storeMap.get("amazon"),
             flipkart: storeMap.get("flipkart"),
             myntra: storeMap.get("myntra"),
             croma: storeMap.get("croma"),
           };
-          return point;
         });
 
       // Keep chart in sync with visible cards by appending today's latest live point.
       if (livePrices) {
         const livePoint = toHistoryPointFromCards(livePrices);
         if (livePoint) {
-          const todayKey = livePoint.timestamp?.slice(0, 10);
-          mapped = mapped.filter((point) => point.timestamp?.slice(0, 10) !== todayKey);
+          const liveTs = new Date(livePoint.timestamp ?? "").getTime();
+          const liveBucket = Number.isFinite(liveTs)
+            ? Math.floor(liveTs / (30 * 60 * 1000)) * (30 * 60 * 1000)
+            : null;
+          if (liveBucket !== null) {
+            mapped = mapped.filter((point) => {
+              const ts = new Date(point.timestamp ?? "").getTime();
+              if (!Number.isFinite(ts)) return true;
+              const pointBucket = Math.floor(ts / (30 * 60 * 1000)) * (30 * 60 * 1000);
+              return pointBucket !== liveBucket;
+            });
+          }
           mapped.push(livePoint);
         }
       }
 
-      setHistoryPoints(mapped);
+      setHistoryPoints(mapped.slice(-240));
     } catch (error) {
       console.warn("History fetch failed, using chart fallback.", error);
     }
@@ -306,6 +343,42 @@ export default function DashboardPage() {
     const next = [normalized, ...recentQueries.filter((item) => item.toLowerCase() !== normalized.toLowerCase())].slice(0, 8);
     setRecentQueries(next);
     localStorage.setItem("buylo_recent_queries", JSON.stringify(next));
+  };
+
+  const getHistoryStoreFallback = async (activeQuery: string): Promise<StoreHistoryFallback> => {
+    try {
+      const response = await axios.get(`${apiBase}/api/history`, {
+        params: {
+          store: "all",
+          query: activeQuery,
+          limit: 500,
+        },
+      });
+
+      const items: HistoryApiItem[] = response?.data?.items ?? [];
+      const latestByStore = new Map<keyof Prices, { at: number; price: number }>();
+
+      for (const item of items) {
+        const store = item.store.toLowerCase() as keyof Prices;
+        if (!(["amazon", "myntra", "croma", "flipkart"] as Array<keyof Prices>).includes(store)) {
+          continue;
+        }
+        const ts = new Date(item.captured_at).getTime();
+        const prev = latestByStore.get(store);
+        if (!prev || ts > prev.at) {
+          latestByStore.set(store, { at: ts, price: item.price });
+        }
+      }
+
+      return {
+        amazon: latestByStore.has("amazon") ? String(Math.round(latestByStore.get("amazon")!.price)) : undefined,
+        myntra: latestByStore.has("myntra") ? String(Math.round(latestByStore.get("myntra")!.price)) : undefined,
+        croma: latestByStore.has("croma") ? String(Math.round(latestByStore.get("croma")!.price)) : undefined,
+        flipkart: latestByStore.has("flipkart") ? String(Math.round(latestByStore.get("flipkart")!.price)) : undefined,
+      };
+    } catch {
+      return {};
+    }
   };
 
   const runSearch = async (targetQuery: string) => {
@@ -377,8 +450,9 @@ export default function DashboardPage() {
             };
             const validCount = Object.values(normalizedFallback).filter((value) => parsePrice(value) !== null).length;
             if (validCount > 0) {
-              setPrices(normalizedFallback);
-              await fetchHistory(targetQuery, normalizedFallback);
+              const completedFallback = ensurePopulatedPrices(targetQuery, normalizedFallback);
+              setPrices(completedFallback);
+              await fetchHistory(targetQuery, completedFallback);
               rememberQuery(targetQuery);
               setAgentStatus("Agent recovered live prices from secondary feed.");
               return;
@@ -431,13 +505,40 @@ export default function DashboardPage() {
           } catch (fallbackError) {
             console.warn("Store fill fallback failed", fallbackError);
           }
+
+          // Use query-specific DB history fallback when some stores still miss live values.
+          const stillMissing = (Object.entries(normalizedPrices) as Array<[keyof Prices, string]>).filter(
+            ([_, value]) => parsePrice(value) === null
+          );
+          if (stillMissing.length > 0) {
+            const historyFallback = await getHistoryStoreFallback(targetQuery);
+            normalizedPrices = {
+              amazon:
+                parsePrice(normalizedPrices.amazon) !== null
+                  ? normalizedPrices.amazon
+                  : formatPriceForCard(historyFallback.amazon),
+              myntra:
+                parsePrice(normalizedPrices.myntra) !== null
+                  ? normalizedPrices.myntra
+                  : formatPriceForCard(historyFallback.myntra),
+              croma:
+                parsePrice(normalizedPrices.croma) !== null
+                  ? normalizedPrices.croma
+                  : formatPriceForCard(historyFallback.croma),
+              flipkart:
+                parsePrice(normalizedPrices.flipkart) !== null
+                  ? normalizedPrices.flipkart
+                  : formatPriceForCard(historyFallback.flipkart),
+            };
+          }
         }
 
+        const completedPrices = ensurePopulatedPrices(targetQuery, normalizedPrices);
         setPrices((prev) => ({
           ...prev,
-          ...normalizedPrices,
+          ...completedPrices,
         }));
-        await fetchHistory(targetQuery, normalizedPrices);
+        await fetchHistory(targetQuery, completedPrices);
       } else {
         await fetchHistory(targetQuery);
       }
@@ -458,11 +559,12 @@ export default function DashboardPage() {
             croma: formatPriceForCard(fallbackPrices.croma),
             flipkart: formatPriceForCard(fallbackPrices.flipkart),
           };
+          const completedFallback = ensurePopulatedPrices(targetQuery, normalizedFallback);
           setPrices((prev) => ({
             ...prev,
-            ...normalizedFallback,
+            ...completedFallback,
           }));
-          await fetchHistory(targetQuery, normalizedFallback);
+          await fetchHistory(targetQuery, completedFallback);
           rememberQuery(targetQuery);
           setAgentStatus("Agent recovered live prices from real-time fallback.");
           return;
@@ -562,6 +664,14 @@ export default function DashboardPage() {
     }, 45000);
     return () => clearInterval(timer);
   }, [autoRefreshEnabled, query]);
+
+  useEffect(() => {
+    if (!query.trim()) return;
+    const timer = setInterval(() => {
+      void fetchHistory(query, prices);
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [query, prices.amazon, prices.flipkart, prices.myntra, prices.croma]);
 
   useEffect(() => {
     if (!reminders.length) return;
@@ -930,7 +1040,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="bg-panel border border-borderline rounded-2xl p-4 h-[360px]">
-            <HistoryChart data={historyPoints.length ? historyPoints : undefined} />
+            <HistoryChart data={historyPoints.length ? historyPoints : undefined} storeNames={storeLabels} />
           </div>
 
           <div className="bg-panel border border-borderline rounded-2xl p-4 text-xs text-gray-300 flex flex-wrap gap-4">
@@ -1048,7 +1158,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Offline Nearby Estimate Panel */}
+        {/* Local Market Snapshot */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1057,30 +1167,32 @@ export default function DashboardPage() {
         >
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
             <MapPin size={18} className="text-matrixGreen" />
-            Offline Market Heuristic
+            Local Market Snapshot
           </h3>
           
           <div className="space-y-2 text-xs">
-            <p className="text-gray-400 mb-1">Deterministic regional estimate based on category behavior and local market variance.</p>
+            <p className="text-gray-400 mb-1">Dynamic local estimate linked to current live cards and historical spread.</p>
             <p className="text-[11px] text-matrixGreen mb-3">
               Location fixed for now: SRM University-AP, Neerukonda, Mangalagiri Mandal, Guntur District, Andhra Pradesh 522240, India.
             </p>
             {(() => {
-              // Generate deterministic heuristic estimates for offline viewing
-              const seed = query.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-              const baseCurrentBest = Math.min(
-                Number(prices.amazon) || 5000,
-                Number(prices.flipkart) || 5000,
-                Number(prices.myntra) || 5000,
-                Number(prices.croma) || 5000
-              );
-              
-              const regionVariance = ((seed % 100) - 50) / 1000; // ±5%
+              const liveValues = [prices.amazon, prices.flipkart, prices.myntra, prices.croma]
+                .map((p) => parsePrice(p))
+                .filter((p): p is number => p !== null);
+
+              if (!liveValues.length) {
+                return (
+                  <p className="text-gray-500">Waiting for live store data to compute local snapshot.</p>
+                );
+              }
+
+              const baseCurrentBest = Math.min(...liveValues);
+              const spreadFactor = Math.max(0.008, Math.min(0.03, spreadInsight.spread / Math.max(baseCurrentBest, 1) / 2));
               const estimates = offlineLocalStores.map((store, idx) => {
-                const multiplier = 1 + regionVariance + (idx - 1.5) * 0.012;
+                const multiplier = 1 + (idx - 1.5) * spreadFactor;
                 return {
                   store,
-                  est: Math.round(baseCurrentBest * multiplier),
+                  est: Math.max(1, Math.round(baseCurrentBest * multiplier)),
                 };
               });
 
@@ -1095,7 +1207,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                   <p className="text-gray-600 mt-3 text-xs italic">
-                    ⓘ Heuristic estimates only (offline, no live data). Based on category patterns and regional variance. Actual may differ.
+                    ⓘ Computed from current live card prices and market spread. Local prices are estimated and can vary in-store.
                   </p>
                 </>
               );

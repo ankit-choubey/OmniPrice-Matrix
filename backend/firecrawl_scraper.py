@@ -62,7 +62,13 @@ def _is_payload_relevant(payload: dict, query: str, no_results_markers: list[str
     matched_tokens = sum(1 for count in token_hits if count > 0)
     total_hits = sum(token_hits)
 
-    return matched_tokens >= 1 and total_hits >= 2
+    # Keep matching permissive enough for marketplace pages where product names
+    # can appear only once in scraped content.
+    if matched_tokens == 0:
+        return False
+    if len(tokens) <= 2:
+        return True
+    return matched_tokens >= 2 or total_hits >= 3
 
 
 def _extract_price_from_payload(payload: dict, query: str, no_results_markers: list[str]) -> Optional[float]:
