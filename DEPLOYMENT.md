@@ -1,7 +1,7 @@
-# OmniPrice Matrix - Deployment Guide
+# Buylo - Deployment Guide
 
 ## 📋 Overview
-This guide walks through deploying OmniPrice Matrix with Firebase Firestore backend, Firecrawl real-time pricing, and Groq LLM predictions.
+This guide walks through deploying Buylo with Firebase Firestore backend, Firecrawl real-time pricing, and Groq LLM predictions.
 
 ### Tech Stack
 - **Frontend:** Next.js 16.2.1 + React + Framer Motion (Deployed on Vercel)
@@ -52,7 +52,7 @@ GROQ_API_KEY=your_groq_api_key_here
 
 # Firebase Configuration (from Service Account JSON)
 FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_SERVICE_ACCOUNT_PATH=../omniprice-xxxxx-firebase-adminsdk-xxxxx.json
+FIREBASE_SERVICE_ACCOUNT_PATH=../buylo-xxxxx-firebase-adminsdk-xxxxx.json
 # Optional alternative: set FIREBASE_PRIVATE_KEY_ID, FIREBASE_PRIVATE_KEY,
 # FIREBASE_CLIENT_EMAIL and FIREBASE_CLIENT_ID directly instead of file path.
 FIREBASE_PRIVATE_KEY_ID=your-key-id
@@ -65,7 +65,7 @@ FIREBASE_AUTH_PROVIDER_X509_CERT_URL=https://www.googleapis.com/oauth2/v1/certs
 FIREBASE_CLIENT_X509_CERT_URL=your-cert-url
 
 # Database (local SQLite)
-DATABASE_URL=sqlite:///omniprice.db
+DATABASE_URL=sqlite:///buylo.db
 
 # API
 LOG_LEVEL=INFO
@@ -164,7 +164,7 @@ gcloud config set project YOUR_PROJECT_ID
 
 # Create Dockerfile (use existing one in backend/)
 # Build and deploy
-gcloud run deploy omniprice-backend \
+gcloud run deploy buylo-backend \
   --source . \
   --runtime python311 \
   --region asia-south1 \
@@ -178,7 +178,7 @@ gcloud run deploy omniprice-backend \
 2. Build image:
 ```bash
 cd backend
-docker build -t omniprice-backend .
+docker build -t buylo-backend .
 ```
 
 3. Deploy to Railway (https://railway.app/):

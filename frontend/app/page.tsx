@@ -32,7 +32,7 @@ export default function LandingPage() {
         </div>
 
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight max-w-4xl">
-          OmniPrice Matrix turns daily shopping into a living personal market assistant.
+          Buylo turns daily shopping into a living personal market assistant.
         </h1>
 
         <p className="text-gray-300 mt-5 max-w-2xl text-base md:text-lg leading-relaxed">

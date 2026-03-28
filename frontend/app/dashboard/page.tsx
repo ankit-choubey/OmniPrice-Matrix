@@ -191,14 +191,14 @@ export default function DashboardPage() {
   const connectFoodApp = (app: "swiggy" | "zomato") => {
     setConnectedApps((prev) => {
       const next = { ...prev, [app]: !prev[app] };
-      localStorage.setItem("omniprice_connected_food_apps", JSON.stringify(next));
+      localStorage.setItem("buylo_connected_food_apps", JSON.stringify(next));
       return next;
     });
     setAgentStatus(`Agent update: ${app} personalization channel ${connectedApps[app] ? "disconnected" : "connected"}.`);
   };
 
   const saveReminders = (rems: Reminder[]) => {
-    localStorage.setItem("omniprice_reminders", JSON.stringify(rems));
+    localStorage.setItem("buylo_reminders", JSON.stringify(rems));
   };
 
   const addReminder = () => {
@@ -305,7 +305,7 @@ export default function DashboardPage() {
     if (!normalized) return;
     const next = [normalized, ...recentQueries.filter((item) => item.toLowerCase() !== normalized.toLowerCase())].slice(0, 8);
     setRecentQueries(next);
-    localStorage.setItem("omniprice_recent_queries", JSON.stringify(next));
+    localStorage.setItem("buylo_recent_queries", JSON.stringify(next));
   };
 
   const runSearch = async (targetQuery: string) => {
@@ -445,7 +445,32 @@ export default function DashboardPage() {
       rememberQuery(targetQuery);
       setAgentStatus("Agent synced live prices and refreshed your long-term trend profile.");
     } catch (error) {
-      console.error("Scraper connection failed. Using matrix fallback values.", error);
+      console.error("Scraper connection failed. Trying real-time fallback.", error);
+      try {
+        const fallback = await axios.get(`${apiBase}/api/real-time-prices`, {
+          params: { query: targetQuery },
+        });
+        const fallbackPrices = (fallback.data as RealtimePricesResponse)?.prices;
+        if (fallbackPrices) {
+          const normalizedFallback: Prices = {
+            amazon: formatPriceForCard(fallbackPrices.amazon),
+            myntra: formatPriceForCard(fallbackPrices.myntra),
+            croma: formatPriceForCard(fallbackPrices.croma),
+            flipkart: formatPriceForCard(fallbackPrices.flipkart),
+          };
+          setPrices((prev) => ({
+            ...prev,
+            ...normalizedFallback,
+          }));
+          await fetchHistory(targetQuery, normalizedFallback);
+          rememberQuery(targetQuery);
+          setAgentStatus("Agent recovered live prices from real-time fallback.");
+          return;
+        }
+      } catch (fallbackError) {
+        console.error("Real-time fallback failed.", fallbackError);
+      }
+
       setAgentStatus("Agent warning: some live sources failed. Fallback pricing is active to keep tracking continuous.");
     } finally {
       setIsSearching(false);
@@ -485,7 +510,7 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem("omniprice_recent_queries");
+    const saved = localStorage.getItem("buylo_recent_queries");
     if (saved) {
       try {
         const parsed = JSON.parse(saved) as string[];
@@ -495,7 +520,7 @@ export default function DashboardPage() {
       }
     }
 
-    const savedApps = localStorage.getItem("omniprice_connected_food_apps");
+    const savedApps = localStorage.getItem("buylo_connected_food_apps");
     if (savedApps) {
       try {
         const parsed = JSON.parse(savedApps) as { swiggy: boolean; zomato: boolean };
@@ -508,7 +533,7 @@ export default function DashboardPage() {
       }
     }
 
-    const savedReminders = localStorage.getItem("omniprice_reminders");
+    const savedReminders = localStorage.getItem("buylo_reminders");
     if (savedReminders) {
       try {
         const parsed = JSON.parse(savedReminders) as Reminder[];
@@ -678,7 +703,7 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <h1 className="text-3xl font-bold tracking-tighter flex items-center gap-2 text-white">
             <Activity className="text-matrixGreen" />
-            OmniPrice <span className="text-gray-500 font-light">Matrix</span>
+            Buylo
           </h1>
           <div className="text-xs text-gray-400 border border-borderline rounded-full px-3 py-1 w-fit">
             Tracks markets + learns your query history over time

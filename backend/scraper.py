@@ -1,6 +1,9 @@
 from urllib.parse import quote_plus
 
-from playwright.async_api import async_playwright
+try:
+    from playwright.async_api import async_playwright
+except ModuleNotFoundError:
+    async_playwright = None
 
 
 USER_AGENT = (
@@ -110,6 +113,9 @@ def _is_relevant_result(query: str, title: str) -> bool:
 
 
 async def get_amazon_price(product_url: str) -> str:
+    if async_playwright is None:
+        return "N/A"
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(user_agent=USER_AGENT)
@@ -131,6 +137,9 @@ async def get_market_prices(query: str) -> dict[str, str]:
         "croma": "N/A",
         "flipkart": "N/A",
     }
+
+    if async_playwright is None:
+        return prices
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)

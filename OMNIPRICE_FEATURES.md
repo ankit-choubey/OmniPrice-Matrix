@@ -1,4 +1,4 @@
-# OmniPrice Matrix 🎯📊
+# Buylo 🎯📊
 
 **End-to-end price intelligence platform with AI-powered buying timing recommendations**
 
@@ -90,7 +90,7 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed setup.
 ## 📁 Project Structure
 
 ```
-OmniPrice_Matrix/
+Buylo_Matrix/
 ├── backend/                  FastAPI server + AI modules
 │   ├── firebase_config.py   # Firestore integration
 │   ├── firecrawl_scraper.py # Real-time price extraction
@@ -195,7 +195,7 @@ vercel deploy --prod  # Auto-deploys on every git push
 ### Deploy Backend (5 minutes)
 ```bash
 # Google Cloud Run
-gcloud run deploy omniprice \
+gcloud run deploy buylo \
   --source . \
   --runtime python311 \
   --region asia-south1 \

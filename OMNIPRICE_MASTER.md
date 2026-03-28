@@ -7,7 +7,7 @@ Target Deployment: Vercel (frontend) + Render Docker (backend) + MongoDB Atlas (
 
 ## 1) Product Intent
 
-OmniPrice Matrix is designed to:
+Buylo is designed to:
 
 1. Accept a product query from the user.
 2. Fetch live price data from backend scraping logic.
@@ -180,7 +180,7 @@ Validation result:
 Command that works:
 
 ~~~bash
-npm --prefix /Users/theank/Documents/OmniPrice_Matrix/frontend run build
+npm --prefix /Users/theank/Documents/Buylo_Matrix/frontend run build
 ~~~
 
 Note:
@@ -233,7 +233,7 @@ Expected response:
 ### Backend
 
 ~~~bash
-cd /Users/theank/Documents/OmniPrice_Matrix/backend
+cd /Users/theank/Documents/Buylo_Matrix/backend
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
@@ -244,7 +244,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ### Frontend
 
 ~~~bash
-cd /Users/theank/Documents/OmniPrice_Matrix/frontend
+cd /Users/theank/Documents/Buylo_Matrix/frontend
 npm install
 npm run dev
 ~~~
@@ -370,7 +370,7 @@ Validated after latest completion pass:
 
 ## 12) Practical Definition of "Project Complete" (Current Milestone)
 
-At this milestone, OmniPrice Matrix is complete for MVP demonstration and iterative expansion:
+At this milestone, Buylo is complete for MVP demonstration and iterative expansion:
 
 1. Full UI flow from landing to personalized dashboard exists.
 2. Core API integrations are live.

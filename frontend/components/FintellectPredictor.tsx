@@ -98,7 +98,7 @@ export default function FintellectPredictor({ query, apiBase }: PredictorProps) 
     setTimeout(() => setPhaseProgress("computing"), 3700);
 
     try {
-      const cacheKey = `omniprice_wait_buy_cache_${query.toLowerCase().trim()}`;
+      const cacheKey = `buylo_wait_buy_cache_${query.toLowerCase().trim()}`;
       const cachedRaw = localStorage.getItem(cacheKey);
       if (cachedRaw) {
         const cached = JSON.parse(cachedRaw) as { ts: number; data: PredictionResult };

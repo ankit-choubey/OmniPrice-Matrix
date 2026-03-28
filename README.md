@@ -1,6 +1,6 @@
-# OmniPrice Matrix
+# Buylo
 
-OmniPrice Matrix is an AI-assisted price intelligence platform that compares live prices across major stores, tracks trends over time, and helps users decide whether to buy now or wait.
+Buylo is an AI-assisted price intelligence platform that compares live prices across major stores, tracks trends over time, and helps users decide whether to buy now or wait.
 
 ## What This Project Includes
 
@@ -42,8 +42,8 @@ frontend/   Next.js application and UI
 ### 1. Clone
 
 ```bash
-git clone https://github.com/ankit-choubey/OmniPrice-Matrix.git
-cd OmniPrice-Matrix
+git clone https://github.com/ankit-choubey/Buylo-Matrix.git
+cd Buylo-Matrix
 ```
 
 ### 2. Backend Setup

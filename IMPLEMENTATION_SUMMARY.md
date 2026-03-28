@@ -1,4 +1,4 @@
-# 🚀 OmniPrice Matrix - Firebase + Firecrawl Implementation Complete
+# 🚀 Buylo - Firebase + Firecrawl Implementation Complete
 
 ## ✅ What's Been Implemented
 
@@ -95,7 +95,7 @@ Added to requirements.txt:
 ## 📁 File Structure
 
 ```
-OmniPrice_Matrix/
+Buylo_Matrix/
 ├── backend/
 │   ├── .env.example              ✅ NEW - Template for secrets
 │   ├── firebase_config.py        ✅ NEW - Firestore setup

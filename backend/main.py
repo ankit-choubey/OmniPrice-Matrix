@@ -124,7 +124,17 @@ async def scrape(url: str):
 
 @app.get("/api/scrape-matrix")
 async def scrape_matrix(query: str):
-    prices = await get_market_prices(query)
+    try:
+        prices = await get_market_prices(query)
+    except Exception as scrape_error:
+        print(f"Primary scraper failed, falling back to Firecrawl: {scrape_error}")
+        realtime_prices = await get_all_store_prices(query)
+        prices = {
+            "amazon": format_price_output(realtime_prices["amazon"]) if realtime_prices.get("amazon") else "N/A",
+            "myntra": format_price_output(realtime_prices["myntra"]) if realtime_prices.get("myntra") else "N/A",
+            "croma": format_price_output(realtime_prices["croma"]) if realtime_prices.get("croma") else "N/A",
+            "flipkart": format_price_output(realtime_prices["flipkart"]) if realtime_prices.get("flipkart") else "N/A",
+        }
 
     # Merge with Firecrawl for stores that failed in browser scraping.
     try:

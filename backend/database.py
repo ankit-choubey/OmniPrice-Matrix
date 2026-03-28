@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 
-DB_PATH = Path(__file__).resolve().parent / "omniprice.db"
+DB_PATH = Path(__file__).resolve().parent / "buylo.db"
 
 
 def _get_connection() -> sqlite3.Connection:

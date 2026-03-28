@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css"; // THIS IS THE CRITICAL LINE
 
 export const metadata: Metadata = {
-  title: "OmniPrice Matrix",
+  title: "Buylo",
   description: "Advanced e-commerce price aggregation",
 };
 
